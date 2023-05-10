@@ -1,3 +1,14 @@
+/**
+ * Firmware per schede sensori
+ * Paquitop
+ * 
+ * Eseguito su: STM32G0B1KBT6 su PCB custom
+ * 
+ * Author: Andrea Grillo S282802
+ * 
+ */
+
+
 #include <EEPROM.h>
 
 #define PIN_LASER PB1
@@ -34,7 +45,7 @@ static int convertLaser(int las) { return las;}
 static int convertSonar(int son) { return son;}
 
 void setup() {
-  /* leggo configurazione dalla memoria FLASH*/
+  /* leggo configurazione dalla memoria FLASH */
   readFromFlash();
 
   /* inizializzazione seriale CAN */
@@ -58,6 +69,7 @@ void loop() {
    *  - GIALLO: sogliaRosso < laser < sogliaGiallo
    */
   if(alarmTime == -1 && (laser < sogliaRosso || sonar < sogliaRosso)) {
+    /* Allarme rosso */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
     TxData[0] = ALARM_ROSSO;
@@ -67,6 +79,7 @@ void loop() {
     
     alarmTime = millis();
   } else if(alarmTime == -1 && sonar < sogliaGiallo) {
+    /* Allarme giallo */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
     TxData[0] = ALARM_GIALLO;
@@ -142,14 +155,11 @@ static void MX_FDCAN1_Init(void) {
   TxHeader.MessageMarker = 0;
 }
 
+
 /**
-  * @brief  Rx FIFO 0 callback.
-  * @param  hfdcan: pointer to an FDCAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified FDCAN.
-  * @param  RxFifo0ITs: indicates which Rx FIFO 0 interrupts are signalled.
-  *         This parameter can be any combination of @arg FDCAN_Rx_Fifo0_Interrupts.
-  * @retval None
-  */
+ * Funzione di callback per la ricezione dei messaggi CAN
+ * WARNING: non cambiare il nome  
+*/
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) == RESET)
