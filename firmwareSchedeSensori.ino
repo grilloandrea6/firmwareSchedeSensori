@@ -204,21 +204,21 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 /* leggo i parametri impostati dalla flash */
 void readFromFlash() {
-    eeprom_buffer_fill();
-    myCanId = eeprom_buffered_read_byte(1);
-    sogliaGiallo = eeprom_buffered_read_byte(2) << 8 | eeprom_buffered_read_byte(3); // dovrò stare attento con i tipi se le soglie sono uint16, analogRead ritorna int
-    sogliaRosso = eeprom_buffered_read_byte(4) << 8 | eeprom_buffered_read_byte(5); // dovrò stare attento con i tipi se le soglie sono uint16
+  eeprom_buffer_fill();
+  myCanId = eeprom_buffered_read_byte(1);
+  sogliaGiallo = eeprom_buffered_read_byte(2) << 8 | eeprom_buffered_read_byte(3); // dovrò stare attento con i tipi se le soglie sono uint16, analogRead ritorna int
+  sogliaRosso = eeprom_buffered_read_byte(4) << 8 | eeprom_buffered_read_byte(5); // dovrò stare attento con i tipi se le soglie sono uint16
 }
 
 /* scrivo sulla flash i parametri */
 void writeToFlash() {
-    eeprom_buffered_write_byte(1, myCanId);
+  eeprom_buffered_write_byte(1, myCanId);
 
-    eeprom_buffered_write_byte(2, sogliaGiallo >> 8);
-    eeprom_buffered_write_byte(3, sogliaGiallo);
+  eeprom_buffered_write_byte(2, sogliaGiallo >> 8);
+  eeprom_buffered_write_byte(3, sogliaGiallo);
 
-    eeprom_buffered_write_byte(4, sogliaRosso >> 8);
-    eeprom_buffered_write_byte(5, sogliaRosso);
-    
-    eeprom_buffer_flush();
+  eeprom_buffered_write_byte(4, sogliaRosso >> 8);
+  eeprom_buffered_write_byte(5, sogliaRosso);
+  
+  eeprom_buffer_flush();
 }
