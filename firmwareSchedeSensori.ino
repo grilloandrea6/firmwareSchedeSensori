@@ -7,12 +7,12 @@
 
 
 enum {
-  setIdCan = 0x12,
-  setSoglie,
-  distRequest,
-  alarmGiallo,
-  alarmRosso,
-  ansDist
+  SET_ID_CAN = 0x12,
+  SET_SOGLIE,
+  DIST_REQUEST,
+  ALARM_GIALLO,
+  ALARM_ROSSO,
+  DIST_ANS
 };
 
 FDCAN_HandleTypeDef hfdcan1;
@@ -57,14 +57,14 @@ void loop() {
    */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
-    TxData[0] = alarmRosso;
+    TxData[0] = ALARM_ROSSO;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
   } else if(sonar < sogliaGiallo) {
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
-    TxData[0] = alarmGiallo;
+    TxData[0] = ALARM_GIALLO;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
@@ -78,7 +78,7 @@ void loop() {
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_6;
 
-    TxData[0] = ansDist;
+    TxData[0] = DIST_ANS;
     TxData[1] = myCanId;
     TxData[2] = laser >> 8;
     TxData[3] = laser;
@@ -175,20 +175,20 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     if ((RxHeader.Identifier == myCanId) && (RxHeader.IdType == FDCAN_STANDARD_ID)/* && (RxHeader.DataLength == FDCAN_DLC_BYTES_2)*/)
     {
       switch(RxData[0]) {
-          case setIdCan:
             myCanId = TxData[1];
             writeToFlash();
           break;
-          case setSoglie:
             sogliaGiallo = RxData[1] << 8 | RxData[2];
             sogliaRosso = RxData[3] << 8 | RxData[4];
             writeToFlash();
           break;
-          case distRequest:
             distRequested = 1;
           break;
       }
 
+        case SET_ID_CAN:
+        case SET_SOGLIE:
+        case DIST_REQUEST:
     }
   }
 }
