@@ -6,33 +6,6 @@
 #define MAIN_ID 0x01
 
 
-
-/*EEPROM 
- * 0 - byte -> 255 data already written / 0 new data
- * 1 - byte -> my CAN addr
- * 2/3 - byte -> soglia giallo
- * 4/5 - byte -> soglia rosso
- * SISTEMARE FILTRI PER FARE PASSARE TUTTO
-  * SISTEMARE COSTANTI DEI COMANDI PER COMBACIARE CON COSO CENTRALE
- * CONFIGURAZIONE CLOCK
- * 
- extern "C" void SystemClock_Config(void)
-{
-  // clock init code here... `e weak
-}
-startup
- - read flash -> soglie e id can
- - check adc -> se supero mando allarme
- 
- - callback can
-	- set id can -> scrivo flash e ricarico variabili
-	- set soglie -> scrivo flash e ricarico variabili
-	
-	- dist request -> leggo e invio
-	
-  ToDo led management
- */
-
 enum {
   setIdCan = 0x12,
   setSoglie,
@@ -60,8 +33,10 @@ static int convertLaser(int las) { return las;}
 static int convertSonar(int son) { return son;}
 
 void setup() {
+  /* leggo configurazione dalla memoria FLASH*/
   readFromFlash();
 
+  /* inizializzazione seriale CAN */
   MX_FDCAN1_Init();
   FDCAN_Config();
 }
@@ -69,10 +44,17 @@ void setup() {
 void loop() {
   int laser, sonar;
 
+  /* lettura dati da sensore e riscalamento */
   laser = convertLaser(analogRead(PIN_LASER));
   sonar = convertSonar(analogRead(PIN_SONAR));
 
   if(laser < sogliaRosso || sonar < sogliaRosso) {
+  /**
+   * Condizioni per mandare un allarme:
+   *  - tempo >= TIMEOUT_ALARM trascorso dall'ultimo allarme
+   *  - ROSSO: laser < sogliaRosso oppure sonar < sogliaRosso
+   *  - GIALLO: sogliaRosso < laser < sogliaGiallo
+   */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
     TxData[0] = alarmRosso;
@@ -88,6 +70,10 @@ void loop() {
       Error_Handler();
   }
 
+  /**
+   * Se si è ricevuta una richiesta di distanza,
+   * procedo a inviare i dati richiesti
+   */
   if(distRequested) {
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_6;
@@ -106,6 +92,10 @@ void loop() {
   }
 }
 
+/**
+ * Inizializzazione CAN
+ * ToDo check valori
+ */
 static void MX_FDCAN1_Init(void) {
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
@@ -203,6 +193,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   }
 }
 
+/* leggo i parametri impostati dalla flash */
 void readFromFlash() {
     eeprom_buffer_fill();
     myCanId = eeprom_buffered_read_byte(1);
@@ -210,6 +201,7 @@ void readFromFlash() {
     sogliaRosso = eeprom_buffered_read_byte(4) << 8 | eeprom_buffered_read_byte(5); // dovrò stare attento con i tipi se le soglie sono uint16
 }
 
+/* scrivo sulla flash i parametri */
 void writeToFlash() {
     eeprom_buffered_write_byte(1, myCanId);
 
