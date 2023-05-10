@@ -27,8 +27,7 @@ uint16_t sogliaGiallo, sogliaRosso;
 uint8_t distRequested = 0;
 long alarmTime = -1;
 
-static void MX_FDCAN1_Init(void);
-static void FDCAN_Config(void);
+static void MX_FDCAN1_Init();
 static void readFromFlash();
 static void writeToFlash();
 static int convertLaser(int las) { return las;}
@@ -40,7 +39,6 @@ void setup() {
 
   /* inizializzazione seriale CAN */
   MX_FDCAN1_Init();
-  FDCAN_Config();
 }
 
 void loop() {
@@ -126,28 +124,7 @@ static void MX_FDCAN1_Init(void) {
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
     Error_Handler();
-}
-
-static void FDCAN_Config(void)
-{
-  FDCAN_FilterTypeDef sFilterConfig;
-
-  /* Configure Rx filter */
-  sFilterConfig.IdType = FDCAN_STANDARD_ID;
-  sFilterConfig.FilterIndex = 0;
-  sFilterConfig.FilterType = FDCAN_FILTER_MASK;
-  sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-  sFilterConfig.FilterID1 = 0x321;
-  sFilterConfig.FilterID2 = 0x7FF;
-  if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK)
-    Error_Handler();
-
-  /* Configure global filter:
-     Filter all remote frames with STD and EXT ID
-     Reject non matching frames with STD ID and EXT ID */
-  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK)
-    Error_Handler();
-
+  
   /* Start the FDCAN module */
   if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
     Error_Handler();
@@ -175,11 +152,8 @@ static void FDCAN_Config(void)
   */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
-  if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET)
-  {
-    /* Retrieve Rx messages from RX FIFO0 */
-    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
-      Error_Handler();
+  if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) == RESET)
+    return;
 
     if ((RxHeader.Identifier == myCanId) && (RxHeader.IdType == FDCAN_STANDARD_ID)/* && (RxHeader.DataLength == FDCAN_DLC_BYTES_2)*/)
     {
