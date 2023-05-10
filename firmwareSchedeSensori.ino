@@ -155,24 +155,27 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) == RESET)
     return;
 
-    if ((RxHeader.Identifier == myCanId) && (RxHeader.IdType == FDCAN_STANDARD_ID)/* && (RxHeader.DataLength == FDCAN_DLC_BYTES_2)*/)
-    {
-      switch(RxData[0]) {
-            myCanId = TxData[1];
-            writeToFlash();
-          break;
-            sogliaGiallo = RxData[1] << 8 | RxData[2];
-            sogliaRosso = RxData[3] << 8 | RxData[4];
-            writeToFlash();
-          break;
-            distRequested = 1;
-          break;
-      }
+  /* Retrieve Rx messages from RX FIFO0 */
+  if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
+    Error_Handler();
 
+  if ((RxHeader.Identifier == myCanId) && (RxHeader.IdType == FDCAN_STANDARD_ID)/* && (RxHeader.DataLength == FDCAN_DLC_BYTES_2)*/)
+  {
+    switch(RxData[0]) {
         case SET_ID_CAN:
+          myCanId = TxData[1];
+          writeToFlash();
+        break;
         case SET_SOGLIE:
+          sogliaGiallo = RxData[1] << 8 | RxData[2];
+          sogliaRosso = RxData[3] << 8 | RxData[4];
+          writeToFlash();
+        break;
         case DIST_REQUEST:
+          distRequested = 1;
+        break;
     }
+
   }
 }
 
