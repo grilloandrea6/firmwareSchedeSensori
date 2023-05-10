@@ -4,6 +4,7 @@
 #define PIN_SONAR PB0
 #define PIN_LED
 #define MAIN_ID 0x01
+#define ALARM_TIMEOUT 2000
 
 
 enum {
@@ -24,6 +25,7 @@ uint8_t TxData[8];
 uint8_t myCanId;
 uint16_t sogliaGiallo, sogliaRosso;
 uint8_t distRequested = 0;
+long alarmTime = -1;
 
 static void MX_FDCAN1_Init(void);
 static void FDCAN_Config(void);
@@ -44,30 +46,37 @@ void setup() {
 void loop() {
   int laser, sonar;
 
+  /* aggiornamento del timeout per l'invio degli allarmi */
+  if(alarmTime != -1 && (millis() - alarmTime) >= ALARM_TIMEOUT) alarmTime = -1;
+
   /* lettura dati da sensore e riscalamento */
   laser = convertLaser(analogRead(PIN_LASER));
   sonar = convertSonar(analogRead(PIN_SONAR));
 
-  if(laser < sogliaRosso || sonar < sogliaRosso) {
   /**
    * Condizioni per mandare un allarme:
    *  - tempo >= TIMEOUT_ALARM trascorso dall'ultimo allarme
    *  - ROSSO: laser < sogliaRosso oppure sonar < sogliaRosso
    *  - GIALLO: sogliaRosso < laser < sogliaGiallo
    */
+  if(alarmTime == -1 && (laser < sogliaRosso || sonar < sogliaRosso)) {
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
     TxData[0] = ALARM_ROSSO;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
-  } else if(sonar < sogliaGiallo) {
+    
+    alarmTime = millis();
+  } else if(alarmTime == -1 && sonar < sogliaGiallo) {
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
     TxData[0] = ALARM_GIALLO;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
+
+    alarmTime = millis();
   }
 
   /**
