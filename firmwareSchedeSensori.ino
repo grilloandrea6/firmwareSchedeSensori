@@ -11,10 +11,10 @@
 
 #include <EEPROM.h>
 
-#define PIN_LASER PB1
-#define PIN_SONAR PB0
-#define PIN_LED
-#define MAIN_ID 0x01
+#define PIN_LASER     PB1
+#define PIN_SONAR     PB0
+#define PIN_LED       PA6
+#define MAIN_ID       0x01
 #define ALARM_TIMEOUT 2000
 
 
