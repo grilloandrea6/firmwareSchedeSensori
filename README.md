@@ -13,3 +13,5 @@ Firmware per il funzionamento delle schede sensori per la piattaforma Robotica P
 
  - configurazione clock CAN
  - controllare filtri CAN
+ - convertLaser/convertSonar
+
