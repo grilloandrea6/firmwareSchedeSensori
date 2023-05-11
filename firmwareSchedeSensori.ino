@@ -50,6 +50,12 @@ void setup() {
 
   /* inizializzazione seriale CAN */
   MX_FDCAN1_Init();
+
+  /* impostazione OUPUT led */
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED,HIGH);
+  delay(500);
+  digitalWrite(PIN_LED,LOW);
 }
 
 void loop() {
@@ -78,6 +84,9 @@ void loop() {
       Error_Handler();
     
     alarmTime = millis();
+    digitalWrite(PIN_LED,HIGH);
+    delay(200);
+    digitalWrite(PIN_LED,LOW);
   } else if(alarmTime == -1 && sonar < sogliaGiallo) {
     /* Allarme giallo */
     TxHeader.Identifier = MAIN_ID;
@@ -88,6 +97,9 @@ void loop() {
       Error_Handler();
 
     alarmTime = millis();
+    digitalWrite(PIN_LED,HIGH);
+    delay(200);
+    digitalWrite(PIN_LED,LOW);
   }
 
   /**
@@ -109,6 +121,9 @@ void loop() {
       Error_Handler();
 
     distRequested = 0;
+    digitalWrite(PIN_LED,HIGH);
+    delay(200);
+    digitalWrite(PIN_LED,LOW);
   }
 }
 
