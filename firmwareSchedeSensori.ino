@@ -1,8 +1,8 @@
 /**
- * Firmware per schede sensori
+ * Firmware for sensor boards
  * Paquitop
  * 
- * Eseguito su: STM32G0B1KBT6 su PCB custom
+ * To be run on: STM32G0B1KBT6 on custom PCB
  * 
  * Author: Andrea Grillo S282802
  * 
@@ -20,10 +20,10 @@
 
 enum {
   SET_ID_CAN = 0x12,
-  SET_SOGLIE,
+  SET_THRESHOLD,
   DIST_REQUEST,
-  ALARM_GIALLO,
-  ALARM_ROSSO,
+  ALARM_YELLOW,
+  ALARM_RED,
   DIST_ANS
 };
 
@@ -34,7 +34,7 @@ FDCAN_TxHeaderTypeDef TxHeader;
 uint8_t TxData[8];
 
 uint8_t myCanId;
-uint16_t sogliaGiallo, sogliaRosso;
+uint16_t yellowThreshold, redThreshold;
 uint8_t distRequested = 0;
 long alarmTime = -1;
 
@@ -45,13 +45,13 @@ static int convertLaser(int las) { return las;}
 static int convertSonar(int son) { return son;}
 
 void setup() {
-  /* leggo configurazione dalla memoria FLASH */
+  /* read config from FLASH memory*/
   readFromFlash();
 
-  /* inizializzazione seriale CAN */
+  /* init CAN serial */
   MX_FDCAN1_Init();
 
-  /* impostazione OUPUT led */
+  /* setting OUTPUT led */
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED,HIGH);
   delay(500);
@@ -61,24 +61,25 @@ void setup() {
 void loop() {
   int laser, sonar;
 
-  /* aggiornamento del timeout per l'invio degli allarmi */
+  /* timeout update to send alarms */
   if(alarmTime != -1 && (millis() - alarmTime) >= ALARM_TIMEOUT) alarmTime = -1;
 
-  /* lettura dati da sensore e riscalamento */
+  /* reading data from sensors */
   laser = convertLaser(analogRead(PIN_LASER));
   sonar = convertSonar(analogRead(PIN_SONAR));
 
   /**
-   * Condizioni per mandare un allarme:
-   *  - tempo >= TIMEOUT_ALARM trascorso dall'ultimo allarme
-   *  - ROSSO: laser < sogliaRosso oppure sonar < sogliaRosso
-   *  - GIALLO: sogliaRosso < laser < sogliaGiallo
+   * Conditions to be met to send an alarm:
+   *  - time elapsed from last alarm sent >= TIMEOUT_ALARM
+   *  - RED: sonar < redThreshold
+   *  - YELLOW: redThreshold < sonar < yellowThreshold
+   *  - LASER: laser < laserThreshold
    */
-  if(alarmTime == -1 && (laser < sogliaRosso || sonar < sogliaRosso)) {
-    /* Allarme rosso */
+  if(alarmTime == -1 && sonar < redThreshold) {
+    /* RED alarm */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
-    TxData[0] = ALARM_ROSSO;
+    TxData[0] = ALARM_RED;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
@@ -87,11 +88,11 @@ void loop() {
     digitalWrite(PIN_LED,HIGH);
     delay(200);
     digitalWrite(PIN_LED,LOW);
-  } else if(alarmTime == -1 && sonar < sogliaGiallo) {
-    /* Allarme giallo */
+  } else if(alarmTime == -1 && sonar < yellowThreshold) {
+    /* YELLOW alarm */
     TxHeader.Identifier = MAIN_ID;
     TxHeader.DataLength = FDCAN_DLC_BYTES_2;
-    TxData[0] = ALARM_GIALLO;
+    TxData[0] = ALARM_YELLOW;
     TxData[1] = myCanId;
     if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
       Error_Handler();
@@ -103,8 +104,8 @@ void loop() {
   }
 
   /**
-   * Se si è ricevuta una richiesta di distanza,
-   * procedo a inviare i dati richiesti
+   * If we received a distance request 
+   * send requested data
    */
   if(distRequested) {
     TxHeader.Identifier = MAIN_ID;
@@ -128,8 +129,8 @@ void loop() {
 }
 
 /**
- * Inizializzazione CAN
- * ToDo check valori
+ * CAN init
+ * ToDo check values
  */
 static void MX_FDCAN1_Init(void) {
   hfdcan1.Instance = FDCAN1;
@@ -172,8 +173,8 @@ static void MX_FDCAN1_Init(void) {
 
 
 /**
- * Funzione di callback per la ricezione dei messaggi CAN
- * WARNING: non cambiare il nome  
+ * Callback function to receive CAN messages
+ * WARNING: do NOT change function name
 */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 {
@@ -191,9 +192,9 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
           myCanId = TxData[1];
           writeToFlash();
         break;
-        case SET_SOGLIE:
-          sogliaGiallo = RxData[1] << 8 | RxData[2];
-          sogliaRosso = RxData[3] << 8 | RxData[4];
+        case SET_THRESHOLD:
+          yellowThreshold = RxData[1] << 8 | RxData[2];
+          redThreshold = RxData[3] << 8 | RxData[4];
           writeToFlash();
         break;
         case DIST_REQUEST:
@@ -204,23 +205,23 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   }
 }
 
-/* leggo i parametri impostati dalla flash */
+/* read config from FLASH */
 void readFromFlash() {
   eeprom_buffer_fill();
   myCanId = eeprom_buffered_read_byte(1);
-  sogliaGiallo = eeprom_buffered_read_byte(2) << 8 | eeprom_buffered_read_byte(3); // dovrò stare attento con i tipi se le soglie sono uint16, analogRead ritorna int
-  sogliaRosso = eeprom_buffered_read_byte(4) << 8 | eeprom_buffered_read_byte(5); // dovrò stare attento con i tipi se le soglie sono uint16
+  yellowThreshold = eeprom_buffered_read_byte(2) << 8 | eeprom_buffered_read_byte(3); 
+  redThreshold = eeprom_buffered_read_byte(4) << 8 | eeprom_buffered_read_byte(5);
 }
 
-/* scrivo sulla flash i parametri */
+/* write config on FLASH */
 void writeToFlash() {
   eeprom_buffered_write_byte(1, myCanId);
 
-  eeprom_buffered_write_byte(2, sogliaGiallo >> 8);
-  eeprom_buffered_write_byte(3, sogliaGiallo);
+  eeprom_buffered_write_byte(2, yellowThreshold >> 8);
+  eeprom_buffered_write_byte(3, yellowThreshold);
 
-  eeprom_buffered_write_byte(4, sogliaRosso >> 8);
-  eeprom_buffered_write_byte(5, sogliaRosso);
+  eeprom_buffered_write_byte(4, redThreshold >> 8);
+  eeprom_buffered_write_byte(5, redThreshold);
   
   eeprom_buffer_flush();
 }
