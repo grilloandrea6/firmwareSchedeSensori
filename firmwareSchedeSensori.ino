@@ -85,7 +85,7 @@ void loop() {
       TxData[0] = ALARM_RED;
     else if(sonar < yellowThreshold) /* YELLOW alarm */
       TxData[0] = ALARM_YELLOW;
-     else alarmSend = 0;
+      else alarmSend = 0;
 
     if(alarmSend) {
       if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
@@ -179,25 +179,22 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   /* Retrieve Rx messages from RX FIFO0 */
   if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK)
     Error_Handler();
-
-  if ((RxHeader.Identifier == myCanId) && (RxHeader.IdType == FDCAN_STANDARD_ID)/* && (RxHeader.DataLength == FDCAN_DLC_BYTES_2)*/)
-  {
-    switch(RxData[0]) {
-        case SET_ID_CAN: // cannot reach this point, I have already checked the identifier ToDo
-          myCanId = TxData[1];
-          writeToFlash();
-        break;
-        case SET_THRESHOLD:
-          yellowThreshold = RxData[1] << 8 | RxData[2];
-          redThreshold = RxData[3] << 8 | RxData[4];
-          laserThreshold = RxData[5] << 8 | RxData[6];
-          writeToFlash();
-        break;
-        case DIST_REQUEST:
-          distRequested = 1;
-        break;
-    }
-
+  
+  /* We can handle only standard messages, not FD */
+  if(RxHeader.IdType != FDCAN_STANDARD_ID)
+    return;
+  
+  /* Data Parsing */
+  if(RxData[0] == SET_ID_CAN && RxHeader.DataLength == FDCAN_DLC_BYTES_2) { /* Set ID CAN */
+    myCanId = TxData[1];
+    writeToFlash();  
+  } else if(RxData[0] == SET_THRESHOLD && RxHeader.DataLength == FDCAN_DLC_BYTES_7) { /* SET_THRESHOLD */
+    yellowThreshold = RxData[1] << 8 | RxData[2];
+    redThreshold = RxData[3] << 8 | RxData[4];
+    laserThreshold = RxData[5] << 8 | RxData[6];
+    writeToFlash();
+  } else if(RxData[0] == DIST_REQUEST && RxHeader.DataLength == FDCAN_DLC_BYTES_1){ /* DIST_REQUEST */
+    distRequested = 1;
   }
 }
 
