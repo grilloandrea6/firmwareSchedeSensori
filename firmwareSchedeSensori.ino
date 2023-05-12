@@ -41,8 +41,6 @@ long alarmTime = -1;
 static void MX_FDCAN1_Init();
 static void readFromFlash();
 static void writeToFlash();
-static int convertLaser(int las) { return las;}
-static int convertSonar(int son) { return son;}
 
 void setup() {
   /* read config from FLASH memory*/
@@ -65,8 +63,8 @@ void loop() {
   if(alarmTime != -1 && (millis() - alarmTime) >= ALARM_TIMEOUT) alarmTime = -1;
 
   /* reading data from sensors */
-  laser = convertLaser(analogRead(PIN_LASER));
-  sonar = convertSonar(analogRead(PIN_SONAR));
+  laser = analogRead(PIN_LASER);
+  sonar = analogRead(PIN_SONAR);
 
   /**
    * Conditions to be met to send an alarm:
