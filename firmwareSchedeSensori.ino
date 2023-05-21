@@ -8,7 +8,6 @@
  * 
  */
 
-
 #include <EEPROM.h>
 
 #define PIN_LASER     PB1
@@ -16,7 +15,6 @@
 #define PIN_LED       PA6
 #define MAIN_ID       0x01
 #define ALARM_TIMEOUT 2000
-
 
 enum {
   SET_ID_CAN = 0x12,
@@ -186,14 +184,14 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   
   /* Data Parsing */
   if(RxData[0] == SET_ID_CAN && RxHeader.DataLength == FDCAN_DLC_BYTES_2) { /* Set ID CAN */
-    myCanId = TxData[1];
+    myCanId = RxData[1];
     writeToFlash();  
   } else if(RxData[0] == SET_THRESHOLD && RxHeader.DataLength == FDCAN_DLC_BYTES_7) { /* SET_THRESHOLD */
     yellowThreshold = RxData[1] << 8 | RxData[2];
     redThreshold = RxData[3] << 8 | RxData[4];
     laserThreshold = RxData[5] << 8 | RxData[6];
     writeToFlash();
-  } else if(RxData[0] == DIST_REQUEST && RxHeader.DataLength == FDCAN_DLC_BYTES_1){ /* DIST_REQUEST */
+  } else if(RxHeader.StdId == myCanId && RxData[0] == DIST_REQUEST && RxHeader.DataLength == FDCAN_DLC_BYTES_1){ /* DIST_REQUEST */
     distRequested = 1;
   }
 }
