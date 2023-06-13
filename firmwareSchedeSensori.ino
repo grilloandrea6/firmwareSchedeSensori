@@ -10,12 +10,13 @@
 
 #include <EEPROM.h>
 
-#define PIN_LASER     PB1
-#define PIN_SONAR     PB0
-#define PIN_LED       PA6
-#define MAIN_ID       0x01
-#define ALARM_TIMEOUT 2000
+#define PIN_LASER     PB1   // pin of the mcu to which the laser is connected
+#define PIN_SONAR     PB0   // pin of the mcu to which the sonar is connected
+#define PIN_LED       PA6   // pin of the mcu to which the LED is connected
+#define MAIN_ID       0x01  // can ID of the main board (receiver)
+#define ALARM_TIMEOUT 2000  // minimum time between the alarms to be sent
 
+// CAN commands
 enum {
   SET_ID_CAN = 0x12,
   SET_THRESHOLD,
@@ -26,17 +27,23 @@ enum {
   DIST_ANS
 };
 
+// global variables to handle CANBUS
 FDCAN_HandleTypeDef hfdcan1;
 FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[8];
 FDCAN_TxHeaderTypeDef TxHeader;
 uint8_t TxData[8];
 
+// CAN ID of this board 
 uint8_t myCanId;
+// thresholds
 uint16_t yellowThreshold, redThreshold, laserThreshold;
+// flag to activate sending of distance
 uint8_t distRequested = 0;
+// time 
 long alarmTime = -1;
 
+// prototipi delle funzioni
 static void MX_FDCAN1_Init();
 static void readFromFlash();
 static void writeToFlash();
@@ -208,7 +215,7 @@ void readFromFlash() {
 /* write config on FLASH */
 void writeToFlash() {
   eeprom_buffered_write_byte(1, myCanId);
-
+  
   eeprom_buffered_write_byte(2, yellowThreshold >> 8);
   eeprom_buffered_write_byte(3, yellowThreshold);
 
