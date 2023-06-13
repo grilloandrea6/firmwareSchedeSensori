@@ -13,6 +13,7 @@ Firmware per il funzionamento delle schede sensori per la piattaforma Robotica P
 
  - configurazione clock CAN
  - controllare filtri CAN
+ - aggiungere invio distanza insieme ad allarmi
 
 
 
