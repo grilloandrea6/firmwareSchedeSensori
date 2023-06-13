@@ -129,9 +129,12 @@ void loop() {
 
 /**
  * CAN init
- * ToDo check values
  */
 static void MX_FDCAN1_Init(void) {
+  /** 
+   * CAN settings for timings and clock division
+   * generated with STM32CUBEIDE. To be tuned with working boards.
+   */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.ClockDivider = FDCAN_CLOCK_DIV1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_FD_BRS;
